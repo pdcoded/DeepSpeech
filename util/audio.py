@@ -1,9 +1,7 @@
-from __future__ import absolute_import
 import numpy as np
 import scipy.io.wavfile as wav
 
-from python_speech_features import mfcc
-from six.moves import range
+from python_speech_features import fbank
 
 def audiofile_to_input_vector(audio_filename, numcep, numcontext):
     r"""
@@ -15,8 +13,13 @@ def audiofile_to_input_vector(audio_filename, numcep, numcontext):
     # Load wav files
     fs, audio = wav.read(audio_filename)
 
-    # Get mfcc coefficients
-    orig_inputs = mfcc(audio, samplerate=fs, numcep=numcep)
+    # Get MFSC features
+    features, energy = fbank(audio, samplerate=fs)
+    features = features[:, :numcep]
+    features = np.log(features)
+    features[:, 0] = np.log(energy)
+
+    orig_inputs = features
 
     # We only keep every second feature (BiRNN stride = 2)
     orig_inputs = orig_inputs[::2]
@@ -35,7 +38,7 @@ def audiofile_to_input_vector(audio_filename, numcep, numcontext):
     empty_mfcc.resize((numcep))
 
     # Prepare train_inputs with past and future contexts
-    time_slices = list(range(train_inputs.shape[0]))
+    time_slices = range(train_inputs.shape[0])
     context_past_min   = time_slices[0]  + numcontext
     context_future_max = time_slices[-1] - numcontext
     for time_slice in time_slices:
@@ -76,4 +79,4 @@ def audiofile_to_input_vector(audio_filename, numcep, numcontext):
     train_inputs = (train_inputs - np.mean(train_inputs))/np.std(train_inputs)
 
     # Return results
-    return train_inputs
+return train_inputs
